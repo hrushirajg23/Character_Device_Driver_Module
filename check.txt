@@ -1,0 +1,199 @@
+make -C /lib/modules/6.11.4-301.fc41.x86_64/build M=/home/hrushiraj/Desktop/black modules
+make[1]: Entering directory '/usr/src/kernels/6.11.4-301.fc41.x86_64'
+  CC [M]  /home/hrushiraj/Desktop/black/high_mem.o
+/home/hrushiraj/Desktop/black/high_mem.c:87:18: error: initialization of ‘ssize_t (*)
+(struct file *, const char *, size_t,  loff_t *)’ {aka ‘long int (*)(struct file *, const char *, 
+long unsigned int,  long long int *)’} from incompatible pointer type ‘ssize_t (*)(struct file *,
+ char *, size_t,  loff_t *)’ {aka ‘long int (*)(struct file *, char *, long unsigned int,  long long 
+ int *)’} [-Wincompatible-pointer-types]
+   87 |         .write = cq_write,
+      |                  ^~~~~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:87:18: note: (near initialization for ‘fops.write’)
+
+
+
+
+/home/hrushiraj/Desktop/black/high_mem.c:89:10: error: ‘struct file_operations’ has no member named ‘ioctl’
+   89 |         .ioctl = cq_ioctl,
+      |          ^~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:89:18: error: positional initialization of field in ‘struct’ declared with ‘designated_init’ attribute [-Werror=designated-init]
+   89 |         .ioctl = cq_ioctl,
+      |                  ^~~~~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:89:18: note: (near initialization for ‘fops’)
+/home/hrushiraj/Desktop/black/high_mem.c:89:18: error: initialization of ‘int (*)(struct file *, void *)’ from incompatible pointer type ‘long int (*)(struct inode *, struct file *, unsigned int,  long unsigned int)’ [-Wincompatible-pointer-types]
+/home/hrushiraj/Desktop/black/high_mem.c:89:18: note: (near initialization for ‘fops.flush’)
+/home/hrushiraj/Desktop/black/high_mem.c: In function ‘initialise’:
+/home/hrushiraj/Desktop/black/high_mem.c:112:28: error: expected ‘;’ before ‘:’ token
+  112 |                 goto failed:
+      |                            ^
+      |                            ;
+/home/hrushiraj/Desktop/black/high_mem.c: At top level:
+/home/hrushiraj/Desktop/black/high_mem.c:154:6: warning: no previous prototype for ‘destroy_queue’ [-Wmissing-prototypes]
+  154 | void destroy_queue(struct cqueue_mgr* mgr){
+      |      ^~~~~~~~~~~~~
+In file included from ./include/linux/build_bug.h:5,
+                 from ./include/linux/init.h:5,
+                 from /home/hrushiraj/Desktop/black/high_mem.c:1:
+/home/hrushiraj/Desktop/black/high_mem.c: In function ‘cq_ioctl’:
+/home/hrushiraj/Desktop/black/high_mem.c:212:39: error: ‘VERIFY_READ’ undeclared (first use in this function); did you mean ‘FORTIFY_READ’?
+  212 |                         if(!access_ok(VERIFY_READ,(void __user*)arg),_IOC_SIZE(cmd)){
+      |                                       ^~~~~~~~~~~
+./include/linux/compiler.h:76:45: note: in definition of macro ‘likely’
+   76 | # define likely(x)      __builtin_expect(!!(x), 1)
+      |                                             ^
+/home/hrushiraj/Desktop/black/high_mem.c:212:29: note: in expansion of macro ‘access_ok’
+  212 |                         if(!access_ok(VERIFY_READ,(void __user*)arg),_IOC_SIZE(cmd)){
+      |                             ^~~~~~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:212:39: note: each undeclared identifier is reported only once for each function it appears in
+  212 |                         if(!access_ok(VERIFY_READ,(void __user*)arg),_IOC_SIZE(cmd)){
+      |                                       ^~~~~~~~~~~
+./include/linux/compiler.h:76:45: note: in definition of macro ‘likely’
+   76 | # define likely(x)      __builtin_expect(!!(x), 1)
+      |                                             ^
+/home/hrushiraj/Desktop/black/high_mem.c:212:29: note: in expansion of macro ‘access_ok’
+  212 |                         if(!access_ok(VERIFY_READ,(void __user*)arg),_IOC_SIZE(cmd)){
+      |                             ^~~~~~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:212:51: error: passing argument 2 of ‘__access_ok’ makes integer from pointer without a cast [-Wint-conversion]
+  212 |                         if(!access_ok(VERIFY_READ,(void __user*)arg),_IOC_SIZE(cmd)){
+      |                                                   ^~~~~~~~~~~~~~~~~
+      |                                                   |
+      |                                                   void *
+./include/linux/compiler.h:76:45: note: in definition of macro ‘likely’
+   76 | # define likely(x)      __builtin_expect(!!(x), 1)
+      |                                             ^
+/home/hrushiraj/Desktop/black/high_mem.c:212:29: note: in expansion of macro ‘access_ok’
+  212 |                         if(!access_ok(VERIFY_READ,(void __user*)arg),_IOC_SIZE(cmd)){
+      |                             ^~~~~~~~~
+In file included from ./arch/x86/include/asm/uaccess.h:22,
+                 from ./include/linux/uaccess.h:12,
+                 from ./include/linux/sched/task.h:13,
+                 from ./include/linux/sched/signal.h:9,
+                 from ./include/linux/rcuwait.h:6,
+                 from ./include/linux/percpu-rwsem.h:7,
+                 from ./include/linux/fs.h:33,
+                 from ./include/linux/compat.h:17,
+                 from ./arch/x86/include/asm/ia32.h:7,
+                 from ./arch/x86/include/asm/elf.h:10,
+                 from ./include/linux/elf.h:6,
+                 from ./include/linux/module.h:19,
+                 from /home/hrushiraj/Desktop/black/high_mem.c:2:
+./arch/x86/include/asm/uaccess_64.h:82:70: note: expected ‘long unsigned int’ but argument is of type ‘void *’
+   82 | static inline bool __access_ok(const void __user *ptr, unsigned long size)
+      |                                                        ~~~~~~~~~~~~~~^~~~
+/home/hrushiraj/Desktop/black/high_mem.c:212:69: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+  212 |                         if(!access_ok(VERIFY_READ,(void __user*)arg),_IOC_SIZE(cmd)){
+      |                                                                     ^
+./arch/x86/include/asm/uaccess.h:56:39: error: expected expression before ‘)’ token
+   56 |         __builtin_choose_expr(sizeof(x)<=sizeof(type),(unsigned type)0,not)
+      |                                       ^
+./arch/x86/include/asm/uaccess.h:50:9: note: in expansion of macro ‘__typefits’
+   50 |         __typefits(x,char,                      \
+      |         ^~~~~~~~~~
+./arch/x86/include/asm/uaccess.h:79:18: note: in expansion of macro ‘__inttype’
+   79 |         register __inttype(*(ptr)) __val_gu asm("%"_ASM_DX);            \
+      |                  ^~~~~~~~~
+./arch/x86/include/asm/uaccess.h:131:27: note: in expansion of macro ‘do_get_user_call’
+  131 | #define __get_user(x,ptr) do_get_user_call(get_user_nocheck,x,ptr)
+      |                           ^~~~~~~~~~~~~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:216:29: note: in expansion of macro ‘__get_user’
+  216 |                         if((__get_user(size,int __user*)arg)==0) {
+      |                             ^~~~~~~~~~
+./arch/x86/include/asm/uaccess.h:53:41: error: expected identifier or ‘(’ before ‘)’ token
+   53 |               __typefits(x,long,0ULL)))))
+      |                                         ^
+./arch/x86/include/asm/uaccess.h:79:18: note: in expansion of macro ‘__inttype’
+   79 |         register __inttype(*(ptr)) __val_gu asm("%"_ASM_DX);            \
+      |                  ^~~~~~~~~
+./arch/x86/include/asm/uaccess.h:131:27: note: in expansion of macro ‘do_get_user_call’
+  131 | #define __get_user(x,ptr) do_get_user_call(get_user_nocheck,x,ptr)
+      |                           ^~~~~~~~~~~~~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:216:29: note: in expansion of macro ‘__get_user’
+  216 |                         if((__get_user(size,int __user*)arg)==0) {
+      |                             ^~~~~~~~~~
+./arch/x86/include/asm/uaccess.h:82:47: error: ‘__val_gu’ undeclared (first use in this function)
+   82 |                      : "=a" (__ret_gu), "=r" (__val_gu),                \
+      |                                               ^~~~~~~~
+./arch/x86/include/asm/uaccess.h:131:27: note: in expansion of macro ‘do_get_user_call’
+  131 | #define __get_user(x,ptr) do_get_user_call(get_user_nocheck,x,ptr)
+      |                           ^~~~~~~~~~~~~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:216:29: note: in expansion of macro ‘__get_user’
+  216 |                         if((__get_user(size,int __user*)arg)==0) {
+      |                             ^~~~~~~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:216:45: error: expected expression before ‘int’
+  216 |                         if((__get_user(size,int __user*)arg)==0) {
+      |                                             ^~~
+./arch/x86/include/asm/uaccess.h:84:29: note: in definition of macro ‘do_get_user_call’
+   84 |                      : "0" (ptr), [size] "i" (sizeof(*(ptr))));         \
+      |                             ^~~
+/home/hrushiraj/Desktop/black/high_mem.c:216:29: note: in expansion of macro ‘__get_user’
+  216 |                         if((__get_user(size,int __user*)arg)==0) {
+      |                             ^~~~~~~~~~
+./arch/x86/include/asm/uaccess.h:84:33: error: expected ‘:’ or ‘)’ before ‘,’ token
+   84 |                      : "0" (ptr), [size] "i" (sizeof(*(ptr))));         \
+      |                                 ^
+./arch/x86/include/asm/uaccess.h:131:27: note: in expansion of macro ‘do_get_user_call’
+  131 | #define __get_user(x,ptr) do_get_user_call(get_user_nocheck,x,ptr)
+      |                           ^~~~~~~~~~~~~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:216:29: note: in expansion of macro ‘__get_user’
+  216 |                         if((__get_user(size,int __user*)arg)==0) {
+      |                             ^~~~~~~~~~
+./arch/x86/include/asm/uaccess.h:86:41: error: expected expression before ‘)’ token
+   86 |         (x) = (__force __typeof__(*(ptr))) __val_gu;                    \
+      |                                         ^
+./arch/x86/include/asm/uaccess.h:131:27: note: in expansion of macro ‘do_get_user_call’
+  131 | #define __get_user(x,ptr) do_get_user_call(get_user_nocheck,x,ptr)
+      |                           ^~~~~~~~~~~~~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:216:29: note: in expansion of macro ‘__get_user’
+  216 |                         if((__get_user(size,int __user*)arg)==0) {
+      |                             ^~~~~~~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:216:57: error: expected ‘)’ before ‘arg’
+  216 |                         if((__get_user(size,int __user*)arg)==0) {
+      |                            ~                            ^~~
+/home/hrushiraj/Desktop/black/high_mem.c:217:74: error: invalid type argument of ‘->’ (have ‘struct cqueue_mgr’)
+  217 |                                 (*(struct cqueue_mgr*)filp->private_data)->size=size;
+      |                                                                          ^~
+/home/hrushiraj/Desktop/black/high_mem.c:220:51: error: passing argument 2 of ‘__access_ok’ makes integer from pointer without a cast [-Wint-conversion]
+  220 |                         if(!access_ok(VERIFY_READ,(void __user*)arg),_IOC_SIZE(cmd)){
+      |                                                   ^~~~~~~~~~~~~~~~~
+      |                                                   |
+      |                                                   void *
+./include/linux/compiler.h:76:45: note: in definition of macro ‘likely’
+   76 | # define likely(x)      __builtin_expect(!!(x), 1)
+      |                                             ^
+/home/hrushiraj/Desktop/black/high_mem.c:220:29: note: in expansion of macro ‘access_ok’
+  220 |                         if(!access_ok(VERIFY_READ,(void __user*)arg),_IOC_SIZE(cmd)){
+      |                             ^~~~~~~~~
+./arch/x86/include/asm/uaccess_64.h:82:70: note: expected ‘long unsigned int’ but argument is of type ‘void *’
+   82 | static inline bool __access_ok(const void __user *ptr, unsigned long size)
+      |                                                        ~~~~~~~~~~~~~~^~~~
+/home/hrushiraj/Desktop/black/high_mem.c:220:69: warning: left-hand operand of comma expression has no effect [-Wunused-value]
+  220 |                         if(!access_ok(VERIFY_READ,(void __user*)arg),_IOC_SIZE(cmd)){
+      |                                                                     ^
+/home/hrushiraj/Desktop/black/high_mem.c:224:51: error: conversion to non-scalar type requested
+  224 |                         if((__get_user(*d,(struct data __user*)arg))!=0){
+      |                                                   ^~~~
+./arch/x86/include/asm/uaccess.h:86:37: note: in definition of macro ‘do_get_user_call’
+   86 |         (x) = (__force __typeof__(*(ptr))) __val_gu;                    \
+      |                                     ^~~
+/home/hrushiraj/Desktop/black/high_mem.c:224:29: note: in expansion of macro ‘__get_user’
+  224 |                         if((__get_user(*d,(struct data __user*)arg))!=0){
+      |                             ^~~~~~~~~~
+/home/hrushiraj/Desktop/black/high_mem.c:245:32: error: ‘_ENOTTY’ undeclared (first use in this function); did you mean ‘ENOTTY’?
+  245 |                         return _ENOTTY;
+      |                                ^~~~~~~
+      |                                ENOTTY
+/home/hrushiraj/Desktop/black/high_mem.c:216:27: warning: this statement may fall through [-Wimplicit-fallthrough=]
+  216 |                         if((__get_user(size,int __user*)arg)==0) {
+      |                           ^
+/home/hrushiraj/Desktop/black/high_mem.c:219:17: note: here
+  219 |                 case PUSH_DATA:
+      |                 ^~~~
+/home/hrushiraj/Desktop/black/high_mem.c:247:1: error: control reaches end of non-void function [-Werror=return-type]
+  247 | }
+      | ^
+cc1: some warnings being treated as errors
+make[3]: *** [scripts/Makefile.build:244: /home/hrushiraj/Desktop/black/high_mem.o] Error 1
+make[2]: *** [/usr/src/kernels/6.11.4-301.fc41.x86_64/Makefile:1966: /home/hrushiraj/Desktop/black] Error 2
+make[1]: *** [Makefile:236: __sub-make] Error 2
+make[1]: Leaving directory '/usr/src/kernels/6.11.4-301.fc41.x86_64'
+make: *** [Makefile:4: all] Error 2

@@ -1,0 +1,97 @@
+Please find the description of the task below:
+
+NOTE: You will have to screen record your entire screen while coding and upload the drive link in a field given below.
+
+Implement dynamic circular queue in linux char device which takes data from IOCTL calls.
+
+In Kernel Space:
+IOCTL operations are:
+SET_SIZE_OF_QUEUE: which takes an integer argument and creates queue according to
+ given size
+PUSH_DATA: passing a structure which contains data and it's length, and push the 
+data of given length
+POP_DATA: passing a structure same as above and just pass the length, while 
+popping data in the structure can be random.
+
+In user space:
+Demonstrate the use of above char device, with sys IOCTL calls. Make sure to 
+make this device blocking i.e. if there is no data passed while popping it should
+wait until other process pushes the data into the char device. The device should 
+be /dev/<your_name>.
+
+Example of the userspace driver:
+-configurator.c
+
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+
+#define DRIVER_NAME "/dev/vicharak"
+#define SET_SIZE_OF_QUEUE _IOW('a', 'a', int * )
+
+int main(void) {
+    int fd = open(DRIVER_NAME, O_RDWR);
+    int size = 100;
+    int ret = ioctl(fd, SET_SIZE_OF_QUEUE, & size);
+    close(fd);
+    return ret;
+}
+
+ - filler.c
+
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+
+#define DRIVER_NAME "/dev/vicharak"
+#define PUSH_DATA _IOW('a', 'b', struct data * )
+
+struct data {
+    int length;
+    char * data;
+};
+
+int main(void) {
+    int fd = open(DRIVER_NAME, O_RDWR);
+    struct data * d = malloc(sizeof(struct data));
+    d.length = 3;
+    d.data = malloc(3);
+    memcpy(d.data, "xyz", 3);
+    int ret = ioctl(fd, PUSH_DATA, d);
+    close(fd);
+    free(d.data);
+    free(d);
+    return ret;
+}
+
+ - reader.c
+
+#include <stdio.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+
+#define DRIVER_NAME "/dev/vicharak"
+#define POP_DATA _IOR('a', 'c', struct data * )
+
+struct data {
+    int length;
+    char * data;
+};
+
+int main(void) {
+    int fd = open(DRIVER_NAME, O_RDWR);
+    struct data * d = malloc(sizeof(struct data));
+    d.length = 3;
+    d.data = malloc(3);
+    int ret = ioctl(fd, PUSH_DATA, d);
+    printf("%s\n", d.data);
+    close(fd);
+    free(d.data);
+    free(d);
+    return ret;
+}
+
+Kernel driver should accept above IOCTL functions
