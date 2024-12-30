@@ -1,0 +1,1 @@
+savedcmd_/home/hrushiraj/Desktop/black/high_mem.ko := ld -r -m elf_x86_64 -z noexecstack --no-warn-rwx-segments --build-id=sha1  -T scripts/module.lds -o /home/hrushiraj/Desktop/black/high_mem.ko /home/hrushiraj/Desktop/black/high_mem.o /home/hrushiraj/Desktop/black/high_mem.mod.o
