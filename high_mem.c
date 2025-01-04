@@ -50,11 +50,10 @@ MODULE_AUTHOR("RAJ");
 
 
 static struct cdev cq_cdev;
-static struct class *cq_class;
+// static struct class *cq_class;
 dev_t dev=0; //device 
-static int nr_opens=0;
 DECLARE_WAIT_QUEUE_HEAD(wq);
-
+static atomic_t open_count = ATOMIC_INIT(0);
 
 struct data{
 	int length;
@@ -73,10 +72,11 @@ struct cqueue_mgr{
 	int curr_size;
 };
 
+static struct cqueue_mgr* mgr=NULL;
 static int cq_open(struct inode* inode,struct file* filp);
 static int cq_release(struct inode* inode,struct file* filp);
-static ssize_t cq_read(struct file* filp,char __user *buf,size_t count,loff_t *f_pos);
-static ssize_t cq_write(struct file* filp,const char __user *buf,size_t count,loff_t *offp);
+// static ssize_t cq_read(struct file* filp,char __user *buf,size_t count,loff_t *f_pos);
+// static ssize_t cq_write(struct file* filp,const char __user *buf,size_t count,loff_t *offp);
 static long cq_ioctl(struct file* filp,unsigned int cmd,unsigned long arg);
 
 void insert(struct cqueue_mgr* mgr,struct data* d);
@@ -87,8 +87,6 @@ void destroy_queue(struct cqueue_mgr* mgr);
 struct file_operations fops=
 {
 	.owner = THIS_MODULE,
-	.read = cq_read,
-	.write = cq_write,
 	.unlocked_ioctl = cq_ioctl,
 	.open = cq_open,
 	.release = cq_release,
@@ -98,11 +96,12 @@ struct file_operations fops=
 
 
 static int __init initialise(void){
-	if((alloc_chrdev_region(&dev,0,1,"mydev"))<0){
+	int err=0;
+	err=alloc_chrdev_region(&dev,0,1,"mydev");
+	if(err<0){
 		printk(KERN_WARNING "failure in char device allocation");
-		return -1;
+		return err;
 	}
-	printk(KERN_INFO "module loaded with MAJOR = %d && MINOR = %d\n",MAJOR(dev),MINOR(dev));
 	
 	/*
 		statically initialising cdev  
@@ -111,50 +110,151 @@ static int __init initialise(void){
 	/*
 		telling kernel about it
 		*/
-	if((cdev_add(&cq_cdev,dev,1))<0){
+	err=cdev_add(&cq_cdev,dev,1);
+	if(err<0){
 		printk(KERN_INFO "cannot add cdev to the system");
 		goto failed;
 	}
-	if(IS_ERR(cq_class=class_create("cq_class"))){
-		printk(KERN_INFO "cannot create class");
-		goto failed;
+	struct cqueue_mgr* mgr=(struct cqueue_mgr*)kmalloc(sizeof(struct cqueue_mgr),GFP_KERNEL);	
+	if(mgr==NULL){
+		printk(KERN_INFO "Couldn't allocate memory for cqueue_mgr\n");
+		cdev_del(&cq_cdev);
+		unregister_chrdev_region(dev,1);
+		return -ENOMEM;
 	}
-
-	if(IS_ERR(device_create(cq_class,NULL,dev,NULL,"cq_device"))){
-		printk(KERN_INFO "Cannot create device\n");
-		goto failed_device;
-	}
+	
+	mgr->head=NULL;
+	mgr->tail=NULL;
+	mgr->size=0;
+	mgr->curr_size=0;
+	// if(IS_ERR(cq_class=class_create("cq_class"))){
+	// 	printk(KERN_INFO "cannot create class");
+	// 	goto failed;
+	// }
+	printk(KERN_INFO "Memory allocated for manager\n");
+	// if(IS_ERR(device_create(cq_class,NULL,dev,NULL,"cq_device"))){
+	// 	printk(KERN_INFO "Cannot create device\n");
+	// 	goto failed_device;
+	// }
 	failed:
 		unregister_chrdev_region(dev,1);
-		cdev_del(&cq_cdev);
-	failed_device:
-		class_destroy(cq_class);
+		
+	// failed_device:
+	// 	class_destroy(cq_class);
 	return 0;
 }
 static void __exit release(void){
-	device_destroy(cq_class,dev);
+	//device_destroy(cq_class,dev);
+	destroy_queue(mgr);
+	cdev_del(&cq_cdev);
 	unregister_chrdev_region(dev,1);
 	printk(KERN_INFO "module unloaded\n");
 
 }
 static int cq_open(struct inode* inode,struct file* filp){
-	printk(KERN_INFO "cq_open");
-	if(nr_opens==0){
-		struct cqueue_mgr* mgr=(struct cqueue_mgr*)kmalloc(sizeof(struct cqueue_mgr),GFP_KERNEL);
+	atomic_inc(&open_count);
 	if(mgr==NULL){
-		printk(KERN_INFO "Couldn't allocate memory for cqueue_mgr\n");
+		printk(KERN_ERR "Derefernce ptr\n");
 		return -1;
 	}
-	mgr->head=NULL;
-	mgr->tail=NULL;
-	mgr->size=0;
-	mgr->curr_size=0;
-	filp->private_data=mgr;
+		
+	filp->private_data=mgr;	
 	
-	}
-	nr_opens++;
+	
+    printk(KERN_INFO "Device opened. Open count: %d\n", atomic_read(&open_count));
+     
 	
 	return 0;
+}
+
+static int cq_release(struct inode* inode,struct file* filp){
+	atomic_dec(&open_count); 
+    printk(KERN_INFO "Device closed. Open count reduced to : %d\n", atomic_read(&open_count));
+	return 0;
+}
+
+static long cq_ioctl(struct file* filp,unsigned int cmd,unsigned long arg){
+	struct data* d=NULL;
+	struct cqueue_mgr* cptr=(struct cqueue_mgr*)filp->private_data;
+	int size;
+	switch(cmd){
+		case SET_SIZE_OF_QUEUE:
+			
+			if(!access_ok((void __user*)arg,sizeof(struct data))){
+				printk(KERN_ERR "no access to user page\n");
+				kfree(d);
+				return -EFAULT;
+			}
+			if((__get_user(size,(int __user*)arg)!=0) ){
+				return -EFAULT;
+			}
+			cptr->size=size;
+			printk(KERN_INFO "Queue size is %d\n",size);
+			break;
+		case PUSH_DATA:
+		d=(struct data*)kmalloc(sizeof(struct data),GFP_KERNEL);;
+			if(!access_ok((void __user*)arg,sizeof(struct data))){
+				printk(KERN_ERR "no access to user page\n");
+				kfree(d);
+				return -EFAULT;
+			}
+		if(d==NULL){
+			return -ENOMEM;
+		}
+		if(copy_from_user(d,(struct data __user *)arg,sizeof(struct data))){
+			kfree(d);
+			return -EFAULT;
+		}
+		// if((__get_user(size,(int __user *)arg))!=0){
+		// 	kfree(d);
+		// 	return -EFAULT;
+		// }
+			
+		if((d->data=(char*)kmalloc(d->length+1,GFP_KERNEL))==NULL){
+			printk(KERN_INFO "kmalloc error for d.data\n");
+			kfree(d);
+			return -ENOMEM;
+		}
+		
+		if((copy_from_user(d->data,((struct data*)arg)->data,d->length))==-EFAULT){
+			printk(KERN_ERR "data copying error\n");
+			kfree(d->data);
+			kfree(d);
+			return -EFAULT;
+		}
+		d->data[d->length]='\n';
+		insert(mgr,d);
+		break;
+		case POP_DATA:
+			
+			if(cptr->curr_size==0){
+				printk(KERN_INFO "Empty queue\n");
+				wait_event_interruptible(wq,mgr->curr_size!=0);
+			}
+			if(!access_ok((void __user*)arg,sizeof(struct data))){
+				printk(KERN_ERR "no access to user page\n");
+				return -EFAULT;
+			}
+			d=remove(cptr);
+			if(copy_to_user((struct data __user * )arg,d,sizeof(struct data))){
+				kfree(d->data);
+				kfree(d);
+				return -EFAULT;
+			}
+			if((copy_to_user(((struct data __user *)arg)->data,d->data,d->length))==-EFAULT){
+				printk(KERN_INFO "POP data copying error\n");
+				kfree(d->data);
+				kfree(d);
+				return -EFAULT;
+			}
+			printk(KERN_INFO "Popped data\n");
+			kfree(d->data);
+			kfree(d);
+			break;
+		default:
+			return -ENOTTY;
+	}
+	return 1;
 }
 
 void destroy_queue(struct cqueue_mgr* mgr){
@@ -183,97 +283,8 @@ void destroy_queue(struct cqueue_mgr* mgr){
 		mgr=NULL;
 		printk(KERN_INFO "Closed successfully with deallocation of resources\n");
 	}
-	
-
 }
 
-static int cq_release(struct inode* inode,struct file* filp){
-	nr_opens--;
-	if(nr_opens==0){
-		destroy_queue((struct cqueue_mgr*)filp->private_data);
-		kfree(filp->private_data);
-
-	}
-	printk(KERN_INFO "cq_release");
-	return 0;
-}
-static ssize_t cq_read(struct file* filp,char __user *buf,size_t count,loff_t *f_pos){
-	printk(KERN_INFO "cq_read");
-	return 0;
-}
-
-static ssize_t cq_write(struct file* filp,const char __user *buf,size_t count,loff_t *offp){
-	printk(KERN_INFO "cq_write");
-	return 0;
-}
-static long cq_ioctl(struct file* filp,unsigned int cmd,unsigned long arg){
-	struct data* d=(struct data*)kmalloc(sizeof(struct data),GFP_KERNEL);
-	if(d==NULL){
-		printk(KERN_INFO "kmalloc failed badly\n");
-		return -EFAULT;
-	}
-	int size;
-	switch(cmd){
-		case SET_SIZE_OF_QUEUE:
-			if(!access_ok((void __user*)arg,_IOC_SIZE(cmd))){
-				kfree(d);
-				return -EFAULT;
-			}
-			if((__get_user(size,(int __user*)arg)==0) ){
-				((struct cqueue_mgr*)filp->private_data)->size=size;
-			}
-			break;
-		case PUSH_DATA:
-			if(!access_ok((void __user*)arg,_IOC_SIZE(cmd))){
-				kfree(d);
-				return -EFAULT;
-			}
-			if((__get_user(size,(int __user *)arg))!=0){
-				kfree(d);
-				return -EFAULT;
-			}
-			d->length=size;
-			//char* ptr=d->data;
-			if((d->data=(char*)kmalloc(d->length+1,GFP_KERNEL))==NULL){
-				printk(KERN_INFO "kmalloc error for d.data\n");
-				kfree(d);
-				return -EFAULT;
-			}
-			
-			if((copy_from_user(d->data,((struct data*)arg)->data,d->length))==-EFAULT){
-				printk(KERN_INFO "data copying error\n");
-				kfree(d->data);
-				kfree(d);
-				return -EFAULT;
-			}
-			d->data[d->length]='\n';
-			insert(((struct cqueue_mgr*)filp->private_data),d);
-			break;
-		case POP_DATA:
-			kfree(d);
-			if(!access_ok((void __user*)arg,_IOC_SIZE(cmd))){
-				return -EFAULT;
-			}
-			d=remove((struct cqueue_mgr*)filp->private_data);
-			if((__put_user(*(int*)d,(int*)arg))==-EFAULT){
-				kfree(d->data);
-				kfree(d);
-				return -EFAULT;
-			}
-			if((copy_to_user((*(struct data*)arg).data,d->data,d->length-1))==-EFAULT){
-				printk(KERN_INFO "POP data copying error\n");
-				kfree(d->data);
-				kfree(d);
-				return -EFAULT;
-			}
-			kfree(d->data);
-			kfree(d);
-			break;
-		default:
-			return -ENOTTY;
-	}
-	return 1;
-}
 
 
 
@@ -285,18 +296,17 @@ void insert(struct cqueue_mgr* mgr,struct data* d){
 		return;
 	}
 	struct cqueue* node=(struct cqueue*)kmalloc(sizeof(struct cqueue),GFP_KERNEL);
-	
 	if(node==NULL){
-			printk(KERN_INFO "memory allocation for cqueue node failed");
-			return;
+		printk(KERN_INFO "memory allocation for cqueue node failed");
+		return;
 	}
-	wake_up_interruptible(&wq);
 		// if((node->dobj.data=(char*)kmalloc(d->length+1,GFP_KERNEL))==NULL){
 		// 	printk(KERN_INFO "memory allocation for cqueue node.obj failed");
 		// 	return;
 		// }
 	
 	node->dobj=(d);
+	node->next=NULL;
 		// node->dobj.data[length]='\n';
 		// node->dobj.length=d->length+1;
 	if(mgr->head==NULL && mgr->tail==NULL){
@@ -308,32 +318,28 @@ void insert(struct cqueue_mgr* mgr,struct data* d){
 		mgr->tail=node;
 	}
 	mgr->curr_size++;
-	if(mgr->tail!=NULL){
-		mgr->tail->next=mgr->head;
-	}
+	
+	wake_up_interruptible(&wq);
 }
 
-void display(struct cqueue_mgr* mgr){
-	struct cqueue* node=mgr->head;
-	printk(KERN_INFO "printing queue\n");
-	do{
-		printk(KERN_INFO "| %s |-> ",node->dobj->data);
-		node=node->next;
-	}while(node!=mgr->head);
-	printk("NULL\n");
-}
+
 
 struct data* remove(struct cqueue_mgr* mgr){
-	struct cqueue* node;
+	struct cqueue* node=NULL;
+	struct data* d=NULL;
 	if(mgr->curr_size==0){
 		printk(KERN_INFO "Empty queue\n");
 	}
-	wait_event_interruptible(wq,mgr->curr_size!=0);
-	if(mgr->head==NULL && mgr->tail==NULL && mgr->curr_size==0){
-		printk(KERN_INFO "queue is empty wait_event activated\n");
-		return NULL;
-	}
-	else if(mgr->head==mgr->tail){
+	/*
+	
+		Remove from empty queue won't be called due to sleeping done right
+	*/
+	// if(mgr->head==NULL && mgr->tail==NULL && mgr->curr_size==0){
+	// 	printk(KERN_INFO "queue is empty wait_event activated\n");
+	// 	return NULL;
+	// }
+
+	if(mgr->head==mgr->tail){
 		node=mgr->head;
 		mgr->head=NULL;
 		mgr->tail=NULL;
@@ -344,10 +350,18 @@ struct data* remove(struct cqueue_mgr* mgr){
 		mgr->tail->next=mgr->head;
 	}
 	mgr->curr_size--;
-	struct data* d=node->dobj;
+	d=node->dobj;
 	kfree(node);
 	return d;
 }
-
+void display(struct cqueue_mgr* mgr){
+	struct cqueue* node=mgr->head;
+	printk(KERN_INFO "printing queue\n");
+	do{
+		printk(KERN_INFO "| %s |-> ",node->dobj->data);
+		node=node->next;
+	}while(node!=mgr->head);
+	printk("NULL\n");
+}
 module_init(initialise);
 module_exit(release);
